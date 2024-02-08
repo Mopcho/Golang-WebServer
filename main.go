@@ -27,17 +27,33 @@ func (h HandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write(responseBody)
 }
+
+func middlewareCors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(200)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
-	handler := HandlerStruct{}
+	corsMux := middlewareCors(http.NewServeMux())
 
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: handler,
+		Handler: corsMux,
 	}
 
 	err := server.ListenAndServe()
 
 	if err != nil {
-		log.Fatal("Failed to start server", err)
+		log.Fatal("Failed to start the server")
 	}
 }
