@@ -28,6 +28,12 @@ func (h HandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(responseBody)
 }
 
+func handleHealthz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(200)
+	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
 func middlewareCors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -45,7 +51,8 @@ func middlewareCors(next http.Handler) http.Handler {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.Dir(".")))
+	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+	mux.HandleFunc("/", handleHealthz)
 
 	corsMux := middlewareCors(mux)
 
