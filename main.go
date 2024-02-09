@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
@@ -30,11 +32,11 @@ type apiCnfg struct {
 	fileserverHits int
 }
 
-func (apiCnfg *apiCnfg) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func (apiCnfg *apiCnfg) middlewareMetricsInc(next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		apiCnfg.fileserverHits++
 		next.ServeHTTP(w, r)
-	})
+	}
 }
 
 func (apiCnfg *apiCnfg) handleMetrictsReset(w http.ResponseWriter, r *http.Request) {
@@ -44,20 +46,21 @@ func (apiCnfg *apiCnfg) handleMetrictsReset(w http.ResponseWriter, r *http.Reque
 }
 
 func main() {
+	router := chi.NewRouter()
+
 	apiCnfg := apiCnfg{
 		fileserverHits: 0,
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/app/", apiCnfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
-	mux.HandleFunc("/", handleHealthz)
-	mux.HandleFunc("/metrics", apiCnfg.handleMetricts)
-	mux.HandleFunc("/metrics/reset", apiCnfg.handleMetrictsReset)
-
-	corsMux := middlewareCors(mux)
+	router.Use(middlewareCors)
+	router.Handle("/app", apiCnfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
+	router.Handle("/app/*", apiCnfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
+	router.Get("/healthz", handleHealthz)
+	router.Get("/metrics", apiCnfg.handleMetricts)
+	router.Get("/metrics/reset", apiCnfg.handleMetrictsReset)
 
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: corsMux,
+		Handler: router,
 	}
 
 	err := server.ListenAndServe()
