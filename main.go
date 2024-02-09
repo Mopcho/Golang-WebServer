@@ -1,32 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 )
-
-type HandlerStruct struct{}
-
-func (h HandlerStruct) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	type SampleBody struct {
-		OK string
-	}
-	sampleBody := SampleBody{
-		OK: "Yes",
-	}
-
-	responseBody, err := json.Marshal(sampleBody)
-
-	if err != nil {
-		w.WriteHeader(500)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(200)
-	w.Write(responseBody)
-}
 
 func handleHealthz(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
@@ -49,10 +26,32 @@ func middlewareCors(next http.Handler) http.Handler {
 	})
 }
 
+type apiCnfg struct {
+	fileserverHits int
+}
+
+func (apiCnfg *apiCnfg) middlewareMetricsInc(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiCnfg.fileserverHits++
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (apiCnfg *apiCnfg) handleMetrictsReset(w http.ResponseWriter, r *http.Request) {
+	apiCnfg.fileserverHits = 0
+
+	w.WriteHeader(200)
+}
+
 func main() {
+	apiCnfg := apiCnfg{
+		fileserverHits: 0,
+	}
 	mux := http.NewServeMux()
-	mux.Handle("/app/", http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+	mux.Handle("/app/", apiCnfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
 	mux.HandleFunc("/", handleHealthz)
+	mux.HandleFunc("/metrics", apiCnfg.handleMetricts)
+	mux.HandleFunc("/metrics/reset", apiCnfg.handleMetrictsReset)
 
 	corsMux := middlewareCors(mux)
 
