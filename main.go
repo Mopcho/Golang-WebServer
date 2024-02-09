@@ -7,12 +7,6 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func handleHealthz(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(200)
-	w.Write([]byte(http.StatusText(http.StatusOK)))
-}
-
 func middlewareCors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -32,31 +26,22 @@ type apiCnfg struct {
 	fileserverHits int
 }
 
-func (apiCnfg *apiCnfg) middlewareMetricsInc(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		apiCnfg.fileserverHits++
-		next.ServeHTTP(w, r)
-	}
-}
-
-func (apiCnfg *apiCnfg) handleMetrictsReset(w http.ResponseWriter, r *http.Request) {
-	apiCnfg.fileserverHits = 0
-
-	w.WriteHeader(200)
-}
-
 func main() {
 	router := chi.NewRouter()
+	apiRouter := chi.NewRouter()
+	appRouter := chi.NewRouter()
 
 	apiCnfg := apiCnfg{
 		fileserverHits: 0,
 	}
+
 	router.Use(middlewareCors)
-	router.Handle("/app", apiCnfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
-	router.Handle("/app/*", apiCnfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
-	router.Get("/healthz", handleHealthz)
-	router.Get("/metrics", apiCnfg.handleMetricts)
-	router.Get("/metrics/reset", apiCnfg.handleMetrictsReset)
+
+	setupAppRouter(appRouter, &apiCnfg)
+	setupApiRouter(apiRouter, &apiCnfg)
+
+	router.Mount("/api", apiRouter)
+	router.Mount("/app", appRouter)
 
 	server := &http.Server{
 		Addr:    ":8080",
