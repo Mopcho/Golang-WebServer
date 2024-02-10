@@ -30,6 +30,7 @@ func main() {
 	router := chi.NewRouter()
 	apiRouter := chi.NewRouter()
 	appRouter := chi.NewRouter()
+	adminRouter := chi.NewRouter()
 
 	apiCnfg := apiCnfg{
 		fileserverHits: 0,
@@ -39,9 +40,11 @@ func main() {
 
 	setupAppRouter(appRouter, &apiCnfg)
 	setupApiRouter(apiRouter, &apiCnfg)
+	setupAdminRouter(adminRouter, &apiCnfg)
 
 	router.Mount("/api", apiRouter)
 	router.Mount("/app", appRouter)
+	router.Mount("/admin", adminRouter)
 
 	server := &http.Server{
 		Addr:    ":8080",
