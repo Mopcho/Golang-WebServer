@@ -18,34 +18,16 @@ func (apiCnfg *apiCnfg) handlerValidateChirp(w http.ResponseWriter, r *http.Requ
 	err := decoder.Decode(&params)
 
 	if err != nil {
-		type errorMsg struct {
-			Error string `json:"error"`
-		}
-
-		errorMsgStruct := errorMsg{
-			Error: "Something went wrong",
-		}
-
-		respondWithJSON(w, r, errorMsgStruct, 400)
+		respondWithError(w, r, "Something went wrong", 400)
 		return
 	}
 
 	if len(params.Body) > 140 {
-		type errorMsg struct {
-			Error string `json:"error"`
-		}
-
-		errorMsgStruct := errorMsg{
-			Error: "Chirp is too long",
-		}
-
-		respondWithJSON(w, r, errorMsgStruct, 400)
+		respondWithError(w, r, "Chirp is too long", 400)
 		return
 	}
 
-	// Censor it
 	censoredSentance := censorWord(params.Body)
-
 	if params.Body != censoredSentance {
 		type validMsg struct {
 			CleanedBody string `json:"cleaned_body"`
