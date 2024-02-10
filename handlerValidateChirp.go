@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -53,9 +54,28 @@ func (apiCnfg *apiCnfg) handlerValidateChirp(w http.ResponseWriter, r *http.Requ
 }
 
 func censorWord(stringToCensor string) string {
-	stringToCensor = strings.ReplaceAll(stringToCensor, "kerfuffle", "*********")
-	stringToCensor = strings.ReplaceAll(stringToCensor, "sharbert", "********")
-	stringToCensor = strings.ReplaceAll(stringToCensor, "fornax", "******")
+	badWordsDictionary := map[string]string{
+		"kerfuffle": "*********",
+		"sharbert":  "********",
+		"fornax":    "******",
+	}
 
-	return stringToCensor
+	censoredSlice := make([]string, 0)
+	words := strings.Split(stringToCensor, " ")
+
+mainLoop:
+	for _, word := range words {
+		for badWord, replacement := range badWordsDictionary {
+			if badWord == strings.ToLower(word) {
+				censoredSlice = slices.Insert(censoredSlice, len(censoredSlice), replacement)
+				continue mainLoop
+			}
+		}
+
+		censoredSlice = slices.Insert(censoredSlice, len(censoredSlice), word)
+	}
+
+	finalString := strings.Join(censoredSlice, " ")
+
+	return finalString
 }
