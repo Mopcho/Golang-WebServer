@@ -80,5 +80,3 @@ func saveChirpToDisk(chirp Chirp) error {
 	_, err = f.Write(newChirpsBytes)
 	return err
 }
-
-// [{}, {}]
