@@ -8,5 +8,5 @@ func setupApiRouter(apiRouter *chi.Mux, apiCnfg *apiCnfg) {
 	apiRouter.Get("/healthz", handleHealthz)
 	apiRouter.Get("/metrics", apiCnfg.handleMetricts)
 	apiRouter.Get("/metrics/reset", apiCnfg.handleMetrictsReset)
-	apiRouter.Post("/validate_chirp", apiCnfg.handlerValidateChirp)
+	apiRouter.Post("/chirps", apiCnfg.handleCreateChirp)
 }
