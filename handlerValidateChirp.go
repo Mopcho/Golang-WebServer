@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 func (apiCnfg *apiCnfg) handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +43,22 @@ func (apiCnfg *apiCnfg) handlerValidateChirp(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Censor it
+	censoredSentance := censorWord(params.Body)
+
+	if params.Body != censoredSentance {
+		type validMsg struct {
+			CleanedBody string `json:"cleaned_body"`
+		}
+
+		validMsgParams := validMsg{
+			CleanedBody: censoredSentance,
+		}
+
+		respondWithJSON(w, r, validMsgParams, 200)
+		return
+	}
+
 	type validMsg struct {
 		Valid bool `json:"valid"`
 	}
@@ -51,4 +68,12 @@ func (apiCnfg *apiCnfg) handlerValidateChirp(w http.ResponseWriter, r *http.Requ
 	}
 
 	respondWithJSON(w, r, validMsgParams, 200)
+}
+
+func censorWord(stringToCensor string) string {
+	stringToCensor = strings.ReplaceAll(stringToCensor, "kerfuffle", "*********")
+	stringToCensor = strings.ReplaceAll(stringToCensor, "sharbert", "********")
+	stringToCensor = strings.ReplaceAll(stringToCensor, "fornax", "******")
+
+	return stringToCensor
 }
