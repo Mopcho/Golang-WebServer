@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"slices"
@@ -51,22 +52,43 @@ func (apiCnfg *apiCnfg) handleCreateChirp(w http.ResponseWriter, r *http.Request
 	respondWithJSON(w, r, chirp, 201)
 }
 
+func (apiCnfg *apiCnfg) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := getChirpsFromDisk()
+
+	if err != nil {
+		respondWithError(w, r, fmt.Sprintf("Error getting chirps: %v", err), 500)
+		return
+	}
+
+	respondWithJSON(w, r, chirps, 200)
+}
+
+func getChirpsFromDisk() ([]Chirp, error) {
+	readBytes, err := os.ReadFile("./chirps.txt")
+
+	if err != nil {
+		return nil, errors.New("Failed to read bytes from file")
+	}
+
+	chirps := make([]Chirp, 0)
+
+	err = json.Unmarshal(readBytes, &chirps)
+
+	if err != nil {
+		return nil, errors.New("Failed unmarsheling bytes to Chirp slice")
+	}
+
+	return chirps, nil
+}
+
 func saveChirpToDisk(chirp Chirp) error {
 	f, err := os.OpenFile("./chirps.txt", os.O_CREATE, 0660)
 	defer f.Close()
 
-	readBytes, err := os.ReadFile("./chirps.txt")
+	readChirps, err := getChirpsFromDisk()
 
 	if err != nil {
-		return errors.New("Failed to read file on disk")
-	}
-
-	readChirps := make([]Chirp, 0)
-
-	err = json.Unmarshal(readBytes, &readChirps)
-
-	if err != nil {
-		return errors.New("Failed to unmarshal bytes to Chirp slice")
+		return err
 	}
 
 	newChirps := slices.Insert(readChirps, 0, chirp)
