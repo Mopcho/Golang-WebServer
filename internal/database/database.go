@@ -94,14 +94,13 @@ func SaveChirpToDisk(createChirpData CreateChirpData) error {
 		return err
 	}
 
-	// Get the biggest ID from readChirps
-	nextId := getNextId(readChirps)
+	nextId := getNextChirpId(readChirps)
 
 	chirp := Chirp{
 		ID:   nextId,
 		Body: createChirpData.Body,
 	}
-	// Use it as key for the new chirp
+
 	readChirps[nextId] = chirp
 
 	newChirpsBytes, err := replaceChirpsInDbStruct(readChirps)
@@ -132,8 +131,7 @@ func replaceChirpsInDbStruct(newChirps Chirps) ([]byte, error) {
 	return dbDataBytes, nil
 }
 
-func getNextId(chirps Chirps) string {
-	// Get all the keys into a slice and turn them into integers
+func getNextChirpId(chirps Chirps) string {
 	ids := make([]int, 0)
 
 	for key := range chirps {
@@ -151,7 +149,6 @@ func getNextId(chirps Chirps) string {
 
 	nextId := slices.Max(ids)
 
-	// Get the biggest through .max
 	nextIdString := strconv.Itoa(nextId + 1)
 
 	return nextIdString
