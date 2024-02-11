@@ -58,7 +58,7 @@ func saveChirpToDisk(chirp Chirp) error {
 	readBytes, err := os.ReadFile("./chirps.txt")
 
 	if err != nil {
-		return errors.New("Something went wrong")
+		return errors.New("Failed to read file on disk")
 	}
 
 	readChirps := make([]Chirp, 0)
@@ -66,7 +66,7 @@ func saveChirpToDisk(chirp Chirp) error {
 	err = json.Unmarshal(readBytes, &readChirps)
 
 	if err != nil {
-		return errors.New("Something went wrong")
+		return errors.New("Failed to unmarshal bytes to Chirp slice")
 	}
 
 	newChirps := slices.Insert(readChirps, 0, chirp)
@@ -74,7 +74,7 @@ func saveChirpToDisk(chirp Chirp) error {
 	newChirpsBytes, err := json.Marshal(newChirps)
 
 	if err != nil {
-		return errors.New("Something went wrong")
+		return errors.New("Failed to marshal Chirp to bytes")
 	}
 
 	_, err = f.Write(newChirpsBytes)
