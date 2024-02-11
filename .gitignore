@@ -3,3 +3,5 @@ dist
 Golang-WebServer.exe
 
 chirps.txt
+
+database.json
