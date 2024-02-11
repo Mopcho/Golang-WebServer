@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"slices"
 	"strconv"
@@ -123,8 +122,6 @@ func replaceChirpsInDbStruct(newChirps Chirps) ([]byte, error) {
 	}
 
 	dbData.Chirps = newChirps
-
-	fmt.Printf("dbData %v\n", dbData)
 
 	dbDataBytes, err := json.Marshal(dbData)
 
