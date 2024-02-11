@@ -62,6 +62,16 @@ func GetDatabaseData() (initialStruct, error) {
 	return databaseData, nil
 }
 
+func GetOneChirp(id string) (Chirp, error) {
+	chirps, err := GetChirpsFromDisk()
+
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	return chirps[id], nil
+}
+
 func GetChirpsFromDisk() (Chirps, error) {
 	readBytes, err := os.ReadFile("./database.json")
 

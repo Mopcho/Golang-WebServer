@@ -9,5 +9,6 @@ func setupApiRouter(apiRouter *chi.Mux, apiCnfg *apiCnfg) {
 	apiRouter.Get("/metrics", apiCnfg.handleMetricts)
 	apiRouter.Get("/metrics/reset", apiCnfg.handleMetrictsReset)
 	apiRouter.Post("/chirps", apiCnfg.handleCreateChirp)
+	apiRouter.Get("/chirps/{chirpId}", apiCnfg.handlerGetChirp)
 	apiRouter.Get("/chirps", apiCnfg.handlerGetChirps)
 }

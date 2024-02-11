@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"internal/database"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func (apiCnfg *apiCnfg) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
@@ -52,4 +54,17 @@ func (apiCnfg *apiCnfg) handlerGetChirps(w http.ResponseWriter, r *http.Request)
 	}
 
 	respondWithJSON(w, r, chirps, 200)
+}
+
+func (apiCnfg *apiCnfg) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
+	chirpId := chi.URLParam(r, "chirpId")
+
+	chirp, err := database.GetOneChirp(chirpId)
+
+	if err != nil {
+		respondWithError(w, r, fmt.Sprintf("Error getting chirp: %v", err), 500)
+		return
+	}
+
+	respondWithJSON(w, r, chirp, 200)
 }
