@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"internal/database"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -27,6 +29,11 @@ type apiCnfg struct {
 }
 
 func main() {
+	err := database.SetupDataBase()
+
+	if err != nil {
+		log.Fatal("Could not setup the database: ", err)
+	}
 	router := chi.NewRouter()
 	apiRouter := chi.NewRouter()
 	appRouter := chi.NewRouter()
@@ -51,7 +58,7 @@ func main() {
 		Handler: router,
 	}
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 
 	if err != nil {
 		log.Fatal("Failed to start the server")
