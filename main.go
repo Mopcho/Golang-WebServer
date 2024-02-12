@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -29,7 +30,9 @@ type apiCnfg struct {
 }
 
 func main() {
-	err := database.SetupDataBase()
+	dbg := flag.Bool("debug", false, "Enable debug mode")
+	flag.Parse()
+	err := database.SetupDataBase(*dbg)
 
 	if err != nil {
 		log.Fatal("Could not setup the database: ", err)

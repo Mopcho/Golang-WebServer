@@ -24,14 +24,7 @@ type initialStruct struct {
 	Users  Users  `json:"users"`
 }
 
-func SetupDataBase() error {
-	file, err := os.Create("./database.json")
-	defer file.Close()
-
-	if err != nil {
-		return err
-	}
-
+func setupCleanDb(file *os.File) error {
 	initDbStruct := initialStruct{}
 
 	dbBytes, err := json.Marshal(initDbStruct)
@@ -41,6 +34,46 @@ func SetupDataBase() error {
 	}
 
 	file.Write(dbBytes)
+
+	return nil
+}
+
+func SetupDataBase(debug bool) error {
+	forceRecreate := false
+	stat, err := os.Stat("./database.json")
+
+	if err != nil || stat.Size() == 0 {
+		// File does not exist or it has no data inside
+		forceRecreate = true
+	} else {
+		// File exists and has data lets check if it has valid json
+		byteDataFromFile, err := os.ReadFile("./database.json")
+
+		if err != nil {
+			return err
+		}
+
+		isValidJson := json.Valid(byteDataFromFile)
+
+		if !isValidJson && !debug {
+			return errors.New("Json is not valid.")
+		}
+	}
+
+	if debug || forceRecreate {
+		file, err := os.Create("./database.json")
+		defer file.Close()
+
+		if err != nil {
+			return err
+		}
+
+		err = setupCleanDb(file)
+
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
