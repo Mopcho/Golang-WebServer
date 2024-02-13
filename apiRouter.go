@@ -15,4 +15,5 @@ func setupApiRouter(apiRouter *chi.Mux, apiCnfg *apiCnfg) {
 	apiRouter.Post("/users", apiCnfg.handlerCreateUser)
 	apiRouter.Get("/users/{userId}", apiCnfg.handlerGetUser)
 	apiRouter.Get("/users", apiCnfg.handleGetUsers)
+	apiRouter.Post("/login", apiCnfg.handleLogin)
 }

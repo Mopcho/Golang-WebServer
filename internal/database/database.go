@@ -6,6 +6,8 @@ import (
 	"os"
 	"slices"
 	"strconv"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type CreateChirpData struct {
@@ -205,12 +207,14 @@ func getNextId(mapData map[string]interface{}) string {
 }
 
 type UserCreateData struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type User struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type Users = map[string]User
@@ -237,9 +241,16 @@ func CreateUser(userCreateData UserCreateData) error {
 
 	nextId := getNextId(usersAny)
 
+	hashedPassword, err := hashPassword(userCreateData.Password)
+
+	if err != nil {
+		return err
+	}
+
 	newUser := User{
-		Email: userCreateData.Email,
-		ID:    nextId,
+		Email:    userCreateData.Email,
+		ID:       nextId,
+		Password: hashedPassword,
 	}
 
 	users[nextId] = newUser
@@ -273,7 +284,7 @@ func replaceUsers(newUsers Users) ([]byte, error) {
 	return databaseDataBytes, nil
 }
 
-func GetUser(id string) (User, error) {
+func GetUserById(id string) (User, error) {
 	users, err := GetUsers()
 
 	if err != nil {
@@ -283,6 +294,22 @@ func GetUser(id string) (User, error) {
 	user := users[id]
 
 	return user, nil
+}
+
+func GetUserByEmail(email string) (User, error) {
+	users, err := GetUsers()
+
+	if err != nil {
+		return User{}, err
+	}
+
+	for key, value := range users {
+		if value.Email == email {
+			return users[key], nil
+		}
+	}
+
+	return User{}, errors.New("User not found")
 }
 
 func GetUsers() (Users, error) {
@@ -305,4 +332,14 @@ func GetUsers() (Users, error) {
 	}
 
 	return dbStruct.Users, nil
+}
+
+func hashPassword(password string) (string, error) {
+	hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+
+	return string(hashBytes), err
+}
+
+func ComparePassword(hashedPassword string, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
