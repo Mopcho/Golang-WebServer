@@ -4,10 +4,12 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"internal/database"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 )
 
 func middlewareCors(next http.Handler) http.Handler {
@@ -27,9 +29,13 @@ func middlewareCors(next http.Handler) http.Handler {
 
 type apiCnfg struct {
 	fileserverHits int
+	jwtSecret      string
 }
 
 func main() {
+	godotenv.Load()
+
+	jwtSecret := os.Getenv("JWT_SECRET")
 	dbg := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
 	err := database.SetupDataBase(*dbg)
@@ -44,6 +50,7 @@ func main() {
 
 	apiCnfg := apiCnfg{
 		fileserverHits: 0,
+		jwtSecret:      jwtSecret,
 	}
 
 	router.Use(middlewareCors)

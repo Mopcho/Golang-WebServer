@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"reflect"
 	"slices"
 	"strconv"
 
@@ -58,12 +59,17 @@ func SetupDataBase(debug bool) error {
 		isValidJson := json.Valid(byteDataFromFile)
 
 		if !isValidJson && !debug {
-			return errors.New("Json is not valid.")
+			return errors.New("json is not valid")
 		}
 	}
 
 	if debug || forceRecreate {
 		file, err := os.Create("./database.json")
+
+		if err != nil {
+			return err
+		}
+
 		defer file.Close()
 
 		if err != nil {
@@ -84,7 +90,7 @@ func GetDatabaseData() (initialStruct, error) {
 	readBytes, err := os.ReadFile("./database.json")
 
 	if err != nil {
-		return initialStruct{}, errors.New("Failed to read bytes from file")
+		return initialStruct{}, errors.New("failed to read bytes from file")
 	}
 
 	databaseData := initialStruct{}
@@ -92,7 +98,7 @@ func GetDatabaseData() (initialStruct, error) {
 	err = json.Unmarshal(readBytes, &databaseData)
 
 	if err != nil {
-		return initialStruct{}, errors.New("Failed unmarsheling bytes to Chirp slice")
+		return initialStruct{}, errors.New("failed unmarsheling bytes to Chirp slice")
 	}
 
 	return databaseData, nil
@@ -112,7 +118,7 @@ func GetChirpsFromDisk() (Chirps, error) {
 	readBytes, err := os.ReadFile("./database.json")
 
 	if err != nil {
-		return nil, errors.New("Failed to read bytes from file")
+		return nil, errors.New("failed to read bytes from file")
 	}
 
 	dbStruct := initialStruct{}
@@ -120,7 +126,7 @@ func GetChirpsFromDisk() (Chirps, error) {
 	err = json.Unmarshal(readBytes, &dbStruct)
 
 	if err != nil {
-		return nil, errors.New("Failed unmarsheling bytes to Chirp slice")
+		return nil, errors.New("failed unmarsheling bytes to Chirp slice")
 	}
 
 	if len(dbStruct.Chirps) == 0 {
@@ -132,6 +138,11 @@ func GetChirpsFromDisk() (Chirps, error) {
 
 func SaveChirpToDisk(createChirpData CreateChirpData) error {
 	f, err := os.OpenFile("./database.json", os.O_CREATE, 0660)
+
+	if err != nil {
+		return err
+	}
+
 	defer f.Close()
 
 	readChirps, err := GetChirpsFromDisk()
@@ -211,6 +222,12 @@ type UserCreateData struct {
 	Password string `json:"password"`
 }
 
+type UserEditData struct {
+	ID       string `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type User struct {
 	ID       string `json:"id"`
 	Email    string `json:"email"`
@@ -220,13 +237,6 @@ type User struct {
 type Users = map[string]User
 
 func CreateUser(userCreateData UserCreateData) error {
-	f, err := os.OpenFile("./database.json", os.O_CREATE, 0660)
-	defer f.Close()
-
-	if err != nil {
-		return err
-	}
-
 	users, err := GetUsers()
 
 	if err != nil {
@@ -255,22 +265,24 @@ func CreateUser(userCreateData UserCreateData) error {
 
 	users[nextId] = newUser
 
-	newDbDataBytes, err := replaceUsers(users)
+	err = replaceUsers(users)
+
+	return err
+}
+
+func replaceUsers(newUsers Users) error {
+	f, err := os.OpenFile("./database.json", os.O_CREATE, 0660)
 
 	if err != nil {
 		return err
 	}
 
-	_, err = f.Write(newDbDataBytes)
+	defer f.Close()
 
-	return err
-}
-
-func replaceUsers(newUsers Users) ([]byte, error) {
 	databaseData, err := GetDatabaseData()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	databaseData.Users = newUsers
@@ -278,10 +290,12 @@ func replaceUsers(newUsers Users) ([]byte, error) {
 	databaseDataBytes, err := json.Marshal(databaseData)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return databaseDataBytes, nil
+	_, err = f.Write(databaseDataBytes)
+
+	return err
 }
 
 func GetUserById(id string) (User, error) {
@@ -324,7 +338,7 @@ func GetUsers() (Users, error) {
 	err = json.Unmarshal(readBytes, &dbStruct)
 
 	if err != nil {
-		return nil, errors.New("Failed unmarsheling bytes to Chirp slice")
+		return nil, errors.New("failed unmarsheling bytes to Chirp slice")
 	}
 
 	if len(dbStruct.Users) == 0 {
@@ -332,6 +346,68 @@ func GetUsers() (Users, error) {
 	}
 
 	return dbStruct.Users, nil
+}
+
+func EditUser(userEditData UserEditData) error {
+	dbUser, err := GetUserById(userEditData.ID)
+
+	if err != nil {
+		return err
+	}
+
+	fields := reflect.VisibleFields(reflect.TypeOf(dbUser))
+
+	for _, field := range fields {
+		fieldName := field.Name
+		orgFieldValue := reflect.ValueOf(dbUser).FieldByName(fieldName)
+		newFieldValue := reflect.ValueOf(userEditData).FieldByName(fieldName)
+
+		if newFieldValue.IsZero() {
+			continue
+		}
+
+		if fieldName == "ID" {
+			continue
+		}
+
+		if orgFieldValue == newFieldValue {
+			continue
+		}
+
+		if fieldName == "Password" {
+			passwordsAreNotTheSame := ComparePassword(orgFieldValue.Interface().(string), newFieldValue.Interface().(string))
+
+			if passwordsAreNotTheSame == nil {
+				continue
+			}
+
+			newHash, err := hashPassword(newFieldValue.Interface().(string))
+
+			if err != nil {
+				return err
+			}
+
+			reflect.ValueOf(&dbUser).Elem().FieldByName(fieldName).SetString(newHash)
+			continue
+		}
+
+		if reflect.ValueOf(&dbUser).Elem().FieldByName(fieldName).Type() != nil {
+			reflect.ValueOf(&dbUser).Elem().FieldByName(fieldName).Set(newFieldValue)
+			continue
+		}
+	}
+
+	users, err := GetUsers()
+
+	if err != nil {
+		return err
+	}
+
+	users[dbUser.ID] = dbUser
+
+	err = replaceUsers(users)
+
+	return err
 }
 
 func hashPassword(password string) (string, error) {

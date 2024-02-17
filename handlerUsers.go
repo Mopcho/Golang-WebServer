@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"internal/database"
 
@@ -71,4 +72,53 @@ func (apiCnfg *apiCnfg) handlerGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, r, user, 200)
+}
+
+func (apiCnfg *apiCnfg) handleEditUser(w http.ResponseWriter, r *http.Request) {
+	tokenHeader := r.Header.Get("Authorization")
+
+	jwtToken := strings.Split(tokenHeader, "Bearer ")[1]
+
+	claims, err := apiCnfg.DecodeToken(jwtToken)
+
+	if err != nil {
+		respondWithError(w, r, fmt.Sprintf("Something Went wrong: %v", err), 400)
+		return
+	}
+
+	userId, err := claims.GetSubject()
+
+	if err != nil {
+		respondWithError(w, r, fmt.Sprintf("Something Went wrong: %v", err), 400)
+		return
+	}
+
+	type bodyParameters struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	params := bodyParameters{}
+
+	decoder := json.NewDecoder(r.Body)
+
+	err = decoder.Decode(&params)
+
+	if err != nil {
+		respondWithError(w, r, "Something Went wrong", 400)
+		return
+	}
+
+	err = database.EditUser(database.UserEditData{
+		ID:       userId,
+		Email:    params.Email,
+		Password: params.Password,
+	})
+
+	if err != nil {
+		respondWithError(w, r, fmt.Sprintf("Error editing user: %v", err), 500)
+		return
+	}
+
+	respondWithJSON(w, r, struct{}{}, 200)
 }

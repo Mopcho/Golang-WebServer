@@ -8,7 +8,7 @@ import (
 
 func validateChirp(chirp string) (string, error) {
 	if len(chirp) > 140 {
-		err := errors.New("Chirp is too long")
+		err := errors.New("chirp is too long")
 		return "", err
 	}
 
